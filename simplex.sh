@@ -139,11 +139,25 @@
 # feature or set PREVOX to 0 in order to
 # deactivate it. (2020/02/25)
 #-------------------------------------------
+# It might be useful to save/log all audio
+# traffic that passes through your simplex
+# repeater. In order to keep the size down
+# I convert the wav file to ogg in the 
+# background. You could easily set that to
+# mp3 instead or you could skip conversion
+# and just keep the original wavs, if you
+# have plenty of disk space.
+# 
+# Setting SAVERECS to 1 activates this
+# feature and setting SAVERECS to 0
+# disables it. (2020/02/26)
+#-------------------------------------------
 
 SECONDS=1000
 DTMFCONTROLS=1
 PARROT=1
-PREVOX=0
+PREVOX=1
+SAVERECS=0
 
 CALLSIGN="YOURCALLSIGN"
 IDLOOPING=1
@@ -303,6 +317,29 @@ dtmfactions () {
           echo "# Received DTMF Command: $1"
           echo "#-------------------------------"
           espeak "Received D T M F Command: $(echo $1| sed -e 's/\(.\)/\1 /g')"
+          if [ $1 = "#0" ]; then
+               espeak "The DTMF commands are"
+               espeak "#0 for help"
+               espeak "#1 for date and time"
+               espeak "#2 will toggle saving recordings"
+               espeak "#73 to terminate the simplex parrot"
+               espeak "#99 to toggle the audio parrot"
+               return
+          fi
+          if [ $1 = "#1" ]; then
+               espeak "`date +"%A, %B %d, %Y, %I:%M %p"`"
+               return
+          fi
+          if [ $1 = "#2" ]; then
+               if [ $SAVERECS -eq 1 ]; then
+                    espeak "Recordings will not be saved."
+                    SAVERECS=0
+               else
+                    espeak "Recordings will be saved."
+                    SAVERECS=1
+               fi 
+               return
+          fi
           if [ $1 = "#73" ]; then
                ctrl_c 
                exit
@@ -317,19 +354,7 @@ dtmfactions () {
                fi 
                return
           fi
-          if [ $1 = "#1" ]; then
-               espeak "`date +"%A %I %M %p"`"
-               return
-          fi
-          if [ $1 = "#0" ]; then
-               espeak "The DTMF commands are"
-               espeak "#0 for help"
-               espeak "#1 for date and time"
-               espeak "#73 to terminate the simplex parrot"
-               espeak "#99 to toggle the audio parrot"
-               return
-          fi
-          espeak "No such code. Send D T M F Code #0 for help."
+          espeak "No such code. Send D T M F Code #0 for help." #should say if no matching DTMF code
      fi
 }
 
@@ -391,14 +416,21 @@ while [ 1 ]; do
           fi
           if [ $PARROT -eq 1 ]; then
                if test -f "./recording.wav"; then
-                    #sleep 1 # wait a second or two (radio dependent) so receive closes first
+                    #sleep 2 # wait a second or two (radio dependent) so receive closes first
                     voxy
                     echo
                     echo "#-------------------------------"
                     echo "# PLAYING BACK CAPTURED AUDIO:"
                     echo "#-------------------------------"
                     play -V1 recording.wav #play back what was said, activating vox
-                    rm recording.wav #cleanup before restarting loop
+                    if [ $SAVERECS = 1 ]; then
+                         #If you decided to save the recordings
+                         TIMESTAMP=$(date)
+                         mv recording.wav "./$TIMESTAMP.wav"
+                         (ffmpeg -loglevel quiet -i "./$TIMESTAMP.wav" "./$TIMESTAMP.ogg"; rm "./$TIMESTAMP.wav") &
+                    else 
+                         rm recording.wav #cleanup before restarting loop
+                    fi
                fi
           fi
 done
