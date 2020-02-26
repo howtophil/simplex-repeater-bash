@@ -391,7 +391,7 @@ while [ 1 ]; do
           fi
           if [ $PARROT -eq 1 ]; then
                if test -f "./recording.wav"; then
-                    sleep 1 # wait a second or two (radio dependent) so transmit closes first
+                    #sleep 1 # wait a second or two (radio dependent) so transmit closes first
                     voxy
                     echo
                     echo "#-------------------------------"
