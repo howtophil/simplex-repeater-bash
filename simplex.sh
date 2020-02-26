@@ -49,7 +49,9 @@
 # mic/headphones splitter on one end
 # to patch the radio into a Linux computer
 # or a Raspberry Pi. The Pi will need a
-# cheap USB sound card.
+# cheap USB soundcard. A USB soundcard
+# could also help with ground issues
+# (buzzing) on computers/laptops.
 # 
 # You'll have to adjust input and output
 # volumes on the computer and the output
@@ -120,18 +122,30 @@
 # Setting PARROT to 1 will enable the
 # repeat of audio received by the script.
 #
-# This way a menu item in dtmfactions
+# This way, a menu item in dtmfactions
 # can be used to turn on and off just the
 # audio repeat part of this script while
 # keeping the DTMF processing in place.
 # (2020/02/24)
 #-------------------------------------------
+# Some radios and radio/computer combos
+# seem to have a slow vox. In those cases
+# activating a sound just loud enough to
+# trip the vox on can help the radio be
+# ready to transmit the first second of
+# the recorded audio.
+#
+# Set PREVOX to 1 in order to activate this
+# feature or set PREVOX to 0 in order to
+# deactivate it. (2020/02/25)
+#-------------------------------------------
 
 SECONDS=1000
 DTMFCONTROLS=1
 PARROT=1
+PREVOX=0
 
-CALLSIGN="YOURCALLSIGN"
+CALLSIGN="KE8GGD"
 IDLOOPING=1
 CALLSIGN_SPEAK=0
 CALLSIGN_MORSE=1
@@ -153,6 +167,7 @@ MULTIMONPROG="multimon-ng"
 trap ctrl_c INT
 
 function ctrl_c() {
+          voxy
           if test -f "./recording.wav"; then
                rm recording.wav
           fi
@@ -161,6 +176,7 @@ function ctrl_c() {
           echo "# Terminating the simplex Parrot"
           echo "#-------------------------------"
           espeak "Terminating the simplex parrot"
+
           #-------------------------------------------
           # Kill the parrot and its parent process
           # since exiting any other way via DTMF 
@@ -172,7 +188,34 @@ function ctrl_c() {
           # Could issue shutdown -h instead in order
           # to shut down Linux/Pi computer completely.
           #-------------------------------------------
+
           kill -9 $PPID
+          #shutdown -h now
+}
+
+#-------------------------------------------
+# VOX ACTIVATOR
+#
+# See notes in the settings area about
+# the PREVOX variable which turns this
+# on and off.
+#
+# Adjust this sound to something that
+# is not annoying/bothersome/crude.
+#
+# Sine sounds a tone and "brownnoise" has
+# the "benefit" of sounding like radio
+# static... So... A bit more natural?
+#
+# Less lossy. More bossy. (2020/02/25)
+#
+#-------------------------------------------
+
+voxy () {
+     if [ $PREVOX -eq 1 ]; then
+          play -n -c1 synth .2 sine 50
+          #play -n -c1 synth .2 brownnoise
+     fi
 }
 
 #-------------------------------------------
@@ -254,6 +297,7 @@ scandtmf () {
 dtmfactions () {
      if [ $# -eq 1 ]; then
           rm recording.wav
+          voxy
           echo
           echo "#-------------------------------"
           echo "# Received DTMF Command: $1"
@@ -282,7 +326,7 @@ dtmfactions () {
                espeak "#0 for help"
                espeak "#1 for date and time"
                espeak "#73 to terminate the simplex parrot"
-               espeak "#99 to toggle the parrot and keep DTMF controls"
+               espeak "#99 to toggle the audio parrot"
                return
           fi
           espeak "No such code. Send D T M F Code #0 for help."
@@ -308,7 +352,9 @@ while [ $IDLOOPING -eq 1 ]; do
           # Identify repeater using espeak, morse,
           # or both (or cw instead of morse).
           #-------------------------------------------
-          sleep 1
+          if [ $CALLSIGN_SPEAK -eq 1 ] || [ $CALLSIGN_MORSE -eq 1 ]; then
+               voxy
+          fi
           if [ $CALLSIGN_SPEAK -eq 1 ]; then
                espeak "This is simplex repeater $(natophonetics $CALLSIGN) / R" &
           fi
@@ -322,6 +368,7 @@ while [ $IDLOOPING -eq 1 ]; do
           #-------------------------------------------
           SECONDS=0
      fi
+     sleep 30 # If we loop this less often, it's easier on the CPU
 done &
 
 
@@ -342,9 +389,10 @@ while [ 1 ]; do
           if [ $DTMFCONTROLS -eq 1 ]; then
                scandtmf
           fi
-          sleep 1 # wait a second so vox can be ready
           if [ $PARROT -eq 1 ]; then
                if test -f "./recording.wav"; then
+                    sleep 1 # wait a second so vox can be ready
+                    voxy
                     echo
                     echo "#-------------------------------"
                     echo "# PLAYING BACK CAPTURED AUDIO:"
