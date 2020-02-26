@@ -213,7 +213,7 @@ function ctrl_c() {
 
 voxy () {
      if [ $PREVOX -eq 1 ]; then
-          play -n -c1 synth .2 sine 50
+          play -n -c1 synth .2 sine 70 #time and tone to activate vox are radio dependent
           #play -n -c1 synth .2 brownnoise
      fi
 }
