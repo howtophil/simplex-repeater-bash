@@ -34,7 +34,7 @@
 # or however is easiest/best for your
 # working environment.
 #
-# Raspberry Pi will use alsa instead of 
+# Raspberry Pi may use alsa instead of 
 # pulse. You'll have to configure things
 # with alsamixer or similar.
 #-------------------------------------------
@@ -152,6 +152,18 @@
 # feature and setting SAVERECS to 0
 # disables it. (2020/02/26)
 #-------------------------------------------
+# Just a few refinements, more comments,
+# and some more DTMF command examples.
+# (2020/02/29)
+#-------------------------------------------
+# Considering a "Dead Man's Switch" option
+# that would require a DTMF sequence every
+# N amount of time in order to keep the
+# repeater running. That way, no spurious
+# parrots continue operation if they
+# can't be reached within a certain time.
+# (2020/02/29)
+#-------------------------------------------
 
 SECONDS=1000
 DTMFCONTROLS=1
@@ -227,7 +239,7 @@ function ctrl_c() {
 
 voxy () {
      if [ $PREVOX -eq 1 ]; then
-          play -n -c1 synth .2 sine 70 #time and tone to activate vox are radio dependent
+          play -V1 -n -c1 synth .2 sine 70 #time and tone to activate vox are radio dependent
           #play -n -c1 synth .2 brownnoise
      fi
 }
@@ -322,6 +334,8 @@ dtmfactions () {
                espeak "#0 for help"
                espeak "#1 for date and time"
                espeak "#2 will toggle saving recordings"
+               espeak "#3 Weather report"
+               espeak "#4 Repeater controller uptime"
                espeak "#73 to terminate the simplex parrot"
                espeak "#99 to toggle the audio parrot"
                return
@@ -338,6 +352,14 @@ dtmfactions () {
                     espeak "Recordings will be saved."
                     SAVERECS=1
                fi 
+               return
+          fi
+          if [ $1 = "#3" ]; then
+               theweather #call the weather function
+               return
+          fi
+          if [ $1 = "#4" ]; then
+               espeak "This parrot has been continuously `uptime -p`"
                return
           fi
           if [ $1 = "#73" ]; then
@@ -358,6 +380,15 @@ dtmfactions () {
      fi
 }
 
+# Just an example of calling another
+# function for a received DTMF command.
+# DTMF Command "#3"
+theweather () {
+     espeak "`ansiweather -p false -a false -s false -l "Kalamazoo, MI" -u imperial |tr "-" "\n" \
+     |tr "=>" "\n" |sed -e 's/°F/degrees/g' |sed -e 's/mph/miles per hour/g' |sed -e 's/$/./'`"
+     return
+}
+
 #-------------------------------------------
 # REPEATER ID LOOP
 #
@@ -371,7 +402,11 @@ while [ $IDLOOPING -eq 1 ]; do
           #-------------------------------------------
           # By checking the value of SECONDS we can
           # identify the repeater every 10 minutes
-          # (600 seconds).
+          # (600 seconds). 
+          # 
+          # Why the loop and not just sleep for 600
+          # seconds? This way an "emergency" ID could
+          # be triggered via menu option etc.
           #-------------------------------------------
           #-------------------------------------------
           # Identify repeater using espeak, morse,
@@ -393,7 +428,7 @@ while [ $IDLOOPING -eq 1 ]; do
           #-------------------------------------------
           SECONDS=0
      fi
-     sleep 30 # If we loop this less often, it's easier on the CPU
+     sleep 30 #If we loop this less often, it's easier on the CPU
 done &
 
 
@@ -416,7 +451,7 @@ while [ 1 ]; do
           fi
           if [ $PARROT -eq 1 ]; then
                if test -f "./recording.wav"; then
-                    #sleep 2 # wait a second or two (radio dependent) so receive closes first
+                    #sleep 2 # wait a second or two (radio dependent) so receive closes first (not always needed)
                     voxy
                     echo
                     echo "#-------------------------------"
@@ -426,8 +461,8 @@ while [ 1 ]; do
                     if [ $SAVERECS = 1 ]; then
                          #If you decided to save the recordings
                          TIMESTAMP=$(date)
-                         mv recording.wav "./$TIMESTAMP.wav"
-                         (ffmpeg -loglevel quiet -i "./$TIMESTAMP.wav" "./$TIMESTAMP.ogg"; rm "./$TIMESTAMP.wav") &
+                         mv recording.wav "./$TIMESTAMP.wav" #moving a file on the smae filesystem is fast and cheap
+                         (ffmpeg -loglevel quiet -i "./$TIMESTAMP.wav" "./$TIMESTAMP.ogg"; rm "./$TIMESTAMP.wav") & #Takes time. Do in background
                     else 
                          rm recording.wav #cleanup before restarting loop
                     fi
