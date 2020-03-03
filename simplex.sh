@@ -359,7 +359,7 @@ dtmfactions () {
                return
           fi
           if [ $1 = "#4" ]; then
-               espeak "This parrot has been continuously `uptime -p`"
+               espeak "This parrot has been `uptime -p | sed "s/^up /squawking for /g" |sed "s/,/ and/"`"
                return
           fi
           if [ $1 = "#73" ]; then
