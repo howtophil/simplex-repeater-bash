@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#
+# New 2FA requirements on GitHub means
+# updates to this script will ONLY be on
+# Pastebin: https://pastebin.com/nGfPrdss
+
 #-------------------------------------------
 # GENERAL NOTES
 #
