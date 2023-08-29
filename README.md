@@ -1,5 +1,4 @@
-# Useless 2FA requirements here mean that ALL future updates will be on Pastebin
-
+# Useless 2FA requirements here mean that future updates will be on Pastebin
 https://pastebin.com/nGfPrdss
 
 Also on Bitbucket: https://bitbucket.org/prhoades/simplex-repeater-bash/src
